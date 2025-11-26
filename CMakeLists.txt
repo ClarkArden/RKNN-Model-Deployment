@@ -9,7 +9,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 project(${PROJECT_NAME})
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # skip 3rd-party lib dependencies
@@ -37,10 +37,14 @@ set(RGA_PATH ${RKNPU_PATH}/examples/3rdparty/rga)
 set(LIB_ARCH gcc-aarch64)
 set(RGA_LIB ${RGA_PATH}/libs/Linux//${LIB_ARCH}/librga.so)
 include_directories(${RGA_PATH}/include)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(${PROJECT_NAME}
-	main.cc
-	src/logger.cc
+    src/main.cc
+    src/logger.cc
+    src/rknn_model.cc
+    src/yolo11.cc
+    src/utils.cc
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -53,6 +57,6 @@ target_link_libraries(${PROJECT_NAME}
 set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install/${PROJECT_NAME})
 install(TARGETS ${PROJECT_NAME} DESTINATION ./)
 
-install(PROGRAMS model/car.jpg DESTINATION ./)
+install(PROGRAMS model/car.jpg DESTINATION ./model)
 install(PROGRAMS model/coco_80_labels_list.txt DESTINATION ./model)
-install(PROGRAMS model/rknn_models/yolov5s-640-640_rk3588.rknn DESTINATION ./)
+install(PROGRAMS model/yolo11.rknn DESTINATION ./model)

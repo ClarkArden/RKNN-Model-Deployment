@@ -31,7 +31,7 @@ rknn_model
 *.pdb
 
 # IDE and editor files
-.vscode/
+# .vscode/
 .claude/
 .idea/
 *.swp
