@@ -44,7 +44,6 @@ rknn_model/
 │   ├── yolo11.rknn         # RKNN model file
 │   ├── car.jpg             # Test image
 │   └── coco_80_labels_list.txt  # Class labels
-├── build.sh                # Cross-compilation script
 └── CMakeLists.txt          # Build configuration
 ```
 
@@ -52,16 +51,11 @@ rknn_model/
 
 ### 1. Environment Configuration
 
-Update the SDK path in `CMakeLists.txt` and `build.sh`:
+Update the SDK path in `CMakeLists.txt`:
 
 ```cmake
 # CMakeLists.txt (line 4)
 set(SDK_ROOT_PATH "/path/to/your/rk3588_linux_release")
-```
-
-```bash
-# build.sh (line 17)
-ENV_SETUP="/path/to/your/buildroot/output/rockchip_rk3588/host/environment-setup"
 ```
 
 ### 2. Prepare Model Files
@@ -76,22 +70,23 @@ Place your RKNN model file in the `model/` directory:
 ### Cross Compilation
 
 ```bash
-# Clean build
-./build.sh clean
+# Create build directory
+mkdir -p build
+cd build
 
-# Build
-./build.sh
+# Configure CMake with toolchain file
+cmake -DCMAKE_TOOLCHAIN_FILE=/home/clark/rk3588/rk3588-buildroot-2021.11-sysroot-v1.0/buildroot/output/rockchip_rk3588/host/share/buildroot/toolchainfile.cmake ..
+
+# Build the project
+make
+
+# Install (optional)
+make install
 ```
 
 The compiled executable will be located at `build/rknn_model`.
 
-### Build Parameters
-
-The build script will:
-1. Load RK3588 cross-compilation environment
-2. Configure CMake for aarch64 target
-3. Build with multiple cores (`-j$(nproc)`)
-4. Verify the output binary
+Note: Update the toolchain file path to match your RK3588 buildroot installation directory.
 
 ## Usage
 
@@ -210,9 +205,9 @@ rknn::Model (Base class)
 
 ### Build Issues
 
-1. **Environment setup file not found**
-   - Verify the `ENV_SETUP` path in `build.sh`
-   - Ensure RK3588 SDK is properly installed
+1. **Toolchain file not found**
+   - Verify the toolchain file path in the cmake command
+   - Ensure RK3588 buildroot SDK is properly installed
 
 2. **Missing dependencies**
    - Check RKNN API path in `CMakeLists.txt`
