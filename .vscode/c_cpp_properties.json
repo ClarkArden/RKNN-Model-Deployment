@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/clark/rk3588/rk3588_linux_release/external/rknpu2/runtime/Linux/librknn_api/include/**",
+                "/home/clark/rk3588/rk3588_linux_release/external/rknpu2/examples/3rdparty/opencv/opencv-linux-aarch64/include/**",
+                "/home/clark/rk3588/rk3588_linux_release/external/rknpu2/examples/3rdparty/opencv/opencv-linux-aarch64/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}
