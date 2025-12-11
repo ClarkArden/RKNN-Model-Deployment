@@ -15,6 +15,13 @@ detector::YOLO5::YOLO5(std::string model_path, logger::Level level, DetectParam 
     m_odReseultsPtr = std::make_unique<object_detect_result_list>();
 }
 
+detector::YOLO5::YOLO5(std::string model_path, logger::Level level, rknn_context* ctx_in, DetectParam detect_param)
+    : rknn::Model(model_path, level, ctx_in) {
+    m_detectParam = detect_param;
+    init_post_process();
+    m_odReseultsPtr = std::make_unique<object_detect_result_list>();
+}
+
 detector::YOLO5::~YOLO5() {}
 
 bool detector::YOLO5::preprocess() {

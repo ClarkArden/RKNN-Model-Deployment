@@ -5,7 +5,14 @@ rknn::Model::Model(std::string model_path, logger::Level level) {
     m_rknnPath = model_path;
     m_logger = std::make_shared<logger::Logger>(level);
     m_params = std::make_unique<Params>();
-    init_model();
+    init_model(nullptr);
+}
+
+rknn::Model::Model(std::string model_path, logger::Level level, rknn_context* ctx_in) {
+    m_rknnPath = model_path;
+    m_logger = std::make_shared<logger::Logger>(level);
+    m_params = std::make_unique<Params>();
+    init_model(ctx_in);
 }
 
 rknn::Model::~Model() {
@@ -23,11 +30,11 @@ rknn::Model::~Model() {
     }
 }
 
-int rknn::Model::init_model() {
+int rknn::Model::init_model(rknn_context* ctx_in) {
     int ret;
     int model_len = 0;
     unsigned char* model;
-    
+
     //load RKNN Model
     model  = load_model(m_rknnPath.c_str(), &model_len);
     if(model == NULL){
@@ -36,12 +43,43 @@ int rknn::Model::init_model() {
     }
     m_rknnCtx = 0;
 
-    ret = rknn_init(&m_rknnCtx, model, model_len, 0, NULL);
+    // Model parameter reuse: use rknn_dup_context if ctx_in is provided
+    if (ctx_in != nullptr) {
+        ret = rknn_dup_context(ctx_in, &m_rknnCtx);
+        LOG("Using shared context (rknn_dup_context)");
+    } else {
+        ret = rknn_init(&m_rknnCtx, model, model_len, 0, NULL);
+        LOG("Creating new context (rknn_init)");
+    }
     free(model);
     if(ret < 0){
-        LOGE("rknn_init fail! ret = %d", ret);
+        LOGE("rknn_init/rknn_dup_context fail! ret = %d", ret);
         return -1;
     }
+
+    // Set model to bind to specific NPU core (round-robin assignment)
+    int core_id = get_core_num();
+    rknn_core_mask core_mask;
+    switch (core_id) {
+        case 0:
+            core_mask = RKNN_NPU_CORE_0;
+            break;
+        case 1:
+            core_mask = RKNN_NPU_CORE_1;
+            break;
+        case 2:
+            core_mask = RKNN_NPU_CORE_2;
+            break;
+        default:
+            core_mask = RKNN_NPU_CORE_AUTO;
+            break;
+    }
+    ret = rknn_set_core_mask(m_rknnCtx, core_mask);
+    if (ret < 0) {
+        LOGE("rknn_set_core_mask fail! ret = %d, core_id = %d", ret, core_id);
+        return -1;
+    }
+    LOG("Model bindied to NPU core %d", core_id);
 
     //get model input info Output NUmber
     rknn_input_output_num io_num;

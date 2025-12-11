@@ -21,8 +21,11 @@ namespace detector
     };
     class YOLO11 : public rknn::Model{
     public:
+        // Standard constructor - creates new rknn context
         YOLO11(std::string model_path, logger::Level level, DetectParam detect_param);
-         
+        // Constructor with context sharing - reuses weights from existing context
+        YOLO11(std::string model_path, logger::Level level, rknn_context* ctx_in, DetectParam detect_param);
+
         ~YOLO11();
         virtual bool preprocess() override;
         virtual bool postprocess() override;

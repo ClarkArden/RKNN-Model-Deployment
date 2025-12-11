@@ -52,6 +52,7 @@ target_link_libraries(${PROJECT_NAME}
   ${RKNN_RT_LIB}
   ${RGA_LIB}
   ${OpenCV_LIBS}
+  pthread
 )
 
 # install target and libraries
