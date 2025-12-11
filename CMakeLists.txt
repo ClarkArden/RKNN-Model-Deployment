@@ -44,6 +44,7 @@ add_executable(${PROJECT_NAME}
     src/logger.cc
     src/rknn_model.cc
     src/yolo11.cc
+    src/yolov5.cc
     src/utils.cc
 )
 
@@ -60,3 +61,4 @@ install(TARGETS ${PROJECT_NAME} DESTINATION ./)
 install(PROGRAMS model/car.jpg DESTINATION ./model)
 install(PROGRAMS model/coco_80_labels_list.txt DESTINATION ./model)
 install(PROGRAMS model/yolo11.rknn DESTINATION ./model)
+install(PROGRAMS model/yolov5.rknn DESTINATION ./model)
