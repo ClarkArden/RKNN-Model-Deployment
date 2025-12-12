@@ -39,7 +39,7 @@ namespace rknn{
         int model_height;
         int model_width;
         int model_channels;
-        
+
         image_info(int height, int width, int channels) : model_height(height), model_width(width), model_channels(channels) {}
     };
 
@@ -51,7 +51,7 @@ namespace rknn{
     };
 
     using ModelResult = std::variant<object_detect_result_list>;
-    
+
     class Model
     {
 
@@ -84,18 +84,21 @@ namespace rknn{
         rknn_input_output_num m_ioNum;
         rknn_tensor_attr* m_inputAttrs;
         rknn_tensor_attr* m_outputAttrs;
-        
+
         std::shared_ptr<logger::Logger>         m_logger;
         std::unique_ptr<rknn_input[]>           m_rknnInputPtr;
         std::unique_ptr<rknn_output[]>          m_rknnOutputPtr;
 
         //source image
         cv::Mat     m_img;
-        
-        ModelResult m_result;
-        
 
-    
+        ModelResult m_result;
+
+        // Mutex for thread-safe inference
+        std::mutex m_inferenceMtx;
+
+
+
     /* data */
 
     };

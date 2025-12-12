@@ -21,6 +21,11 @@ detector::YOLO11::YOLO11(std::string model_path, logger::Level level, rknn_conte
 
 detector::YOLO11::~YOLO11() {}
 
+object_detect_result_list detector::YOLO11::infer(cv::Mat img) {
+    auto result = inference(img);
+    return std::get<object_detect_result_list>(result);
+}
+
 bool detector::YOLO11::preprocess() {
   // 将原始图像处理成模型所需的大小
   memset(&m_pads, 0, sizeof(image_rect_t));

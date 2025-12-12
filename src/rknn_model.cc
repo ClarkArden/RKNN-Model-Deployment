@@ -5,6 +5,9 @@ rknn::Model::Model(std::string model_path, logger::Level level) {
     m_rknnPath = model_path;
     m_logger = std::make_shared<logger::Logger>(level);
     m_params = std::make_unique<Params>();
+    m_inputAttrs = nullptr;
+    m_outputAttrs = nullptr;
+    m_rknnCtx = 0;
     init_model(nullptr);
 }
 
@@ -12,6 +15,9 @@ rknn::Model::Model(std::string model_path, logger::Level level, rknn_context* ct
     m_rknnPath = model_path;
     m_logger = std::make_shared<logger::Logger>(level);
     m_params = std::make_unique<Params>();
+    m_inputAttrs = nullptr;
+    m_outputAttrs = nullptr;
+    m_rknnCtx = 0;
     init_model(ctx_in);
 }
 
@@ -150,6 +156,9 @@ int rknn::Model::init_model(rknn_context* ctx_in) {
 }
 
 rknn::ModelResult rknn::Model::inference(cv::Mat img) {
+    // Lock to ensure thread-safe inference for this model instance
+    std::lock_guard<std::mutex> lock(m_inferenceMtx);
+
     int ret;
     m_img = img.clone();
 

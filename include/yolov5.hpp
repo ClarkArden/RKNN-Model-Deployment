@@ -21,6 +21,9 @@ namespace detector
         YOLO5(std::string model_path, logger::Level level, rknn_context* ctx_in, DetectParam detect_param);
         ~YOLO5();
 
+        // infer method for thread pool (returns object_detect_result_list directly)
+        object_detect_result_list infer(cv::Mat img);
+
         virtual bool preprocess() override;
         virtual bool postprocess() override;
         virtual void draw(cv::Mat img) override;

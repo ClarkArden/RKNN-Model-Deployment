@@ -2,9 +2,11 @@
 #include <memory>
 #include <vector>
 #include <thread>
+#include <atomic>
 #include <sys/time.h>
 #include "yolo11.hpp"
 #include "yolov5.hpp"
+#include "RknnPool.hpp"
 
 // 获取微秒级时间戳
 static int64_t __get_us(struct timeval t) {
@@ -171,6 +173,174 @@ void test_share_weight(const std::string& img_path) {
         (__get_us(stop_time) - __get_us(start_time)) / 1000.0 / 30);
 }
 
+// 测试线程池推理 (使用RknnPool)
+void test_thread_pool(const std::string& img_path) {
+    LOG("========== Testing Thread Pool (RknnPool) ==========");
+    std::string model_path = "./model/yolo11.rknn";
+    detector::DetectParam detect_param = {0.25, 0.45, 114, 80};
+
+    // 创建线程池，3个线程对应3个NPU核心
+    int thread_num = 3;
+    LOG("Creating RknnPool with %d threads...", thread_num);
+
+    rknn::RknnPool<detector::YOLO11, cv::Mat, object_detect_result_list> pool(
+        model_path, thread_num, logger::Level::INFO, detect_param);
+
+    int ret = pool.init(detect_param);
+    if (ret != 0) {
+        LOGE("RknnPool init failed!");
+        return;
+    }
+
+    cv::Mat img = cv::imread(img_path);
+
+    // 提交多个推理任务
+    int task_count = 30;
+    struct timeval start_time, stop_time;
+
+    LOG("Submitting %d inference tasks to thread pool...", task_count);
+    gettimeofday(&start_time, NULL);
+
+    // 提交任务
+    for (int i = 0; i < task_count; i++) {
+        pool.put(img);
+    }
+
+    // 获取结果
+    int result_count = 0;
+    object_detect_result_list result;
+    while (pool.get(result) == 0) {
+        result_count++;
+        LOG("Got result %d: detected %d objects", result_count, result.count);
+    }
+
+    gettimeofday(&stop_time, NULL);
+
+    LOG("Thread pool test completed: %d tasks processed", result_count);
+    LOG("Total time: %f ms, Average per inference: %f ms\n",
+        (__get_us(stop_time) - __get_us(start_time)) / 1000.0,
+        (__get_us(stop_time) - __get_us(start_time)) / 1000.0 / result_count);
+}
+
+// 测试线程池推理 - YOLOv5
+void test_thread_pool_yolov5(const std::string& img_path) {
+    LOG("========== Testing Thread Pool YOLOv5 (RknnPool) ==========");
+    std::string model_path = "./model/yolov5.rknn";
+    detector::DetectParam detect_param = {0.25, 0.45, 114, 80};
+
+    // 创建线程池，3个线程对应3个NPU核心
+    int thread_num = 3;
+    LOG("Creating RknnPool with %d threads for YOLOv5...", thread_num);
+
+    rknn::RknnPool<detector::YOLO5, cv::Mat, object_detect_result_list> pool(
+        model_path, thread_num, logger::Level::INFO, detect_param);
+
+    int ret = pool.init(detect_param);
+    if (ret != 0) {
+        LOGE("RknnPool init failed!");
+        return;
+    }
+
+    cv::Mat img = cv::imread(img_path);
+
+    // 提交多个推理任务
+    int task_count = 30;
+    struct timeval start_time, stop_time;
+
+    LOG("Submitting %d inference tasks to thread pool...", task_count);
+    gettimeofday(&start_time, NULL);
+
+    // 提交任务
+    for (int i = 0; i < task_count; i++) {
+        pool.put(img);
+    }
+
+    // 获取结果
+    int result_count = 0;
+    object_detect_result_list result;
+    while (pool.get(result) == 0) {
+        result_count++;
+        LOG("Got result %d: detected %d objects", result_count, result.count);
+    }
+
+    gettimeofday(&stop_time, NULL);
+
+    LOG("YOLOv5 Thread pool test completed: %d tasks processed", result_count);
+    LOG("Total time: %f ms, Average per inference: %f ms\n",
+        (__get_us(stop_time) - __get_us(start_time)) / 1000.0,
+        (__get_us(stop_time) - __get_us(start_time)) / 1000.0 / result_count);
+}
+
+// 测试线程池推理 - 模拟视频流处理 (生产者-消费者模式)
+void test_thread_pool_video(const std::string& img_path) {
+    LOG("========== Testing Thread Pool Video Mode (Producer-Consumer) ==========");
+    std::string model_path = "./model/yolo11.rknn";
+    detector::DetectParam detect_param = {0.25, 0.45, 114, 80};
+
+    // 创建线程池
+    int thread_num = 3;
+    LOG("Creating RknnPool with %d threads...", thread_num);
+
+    rknn::RknnPool<detector::YOLO11, cv::Mat, object_detect_result_list> pool(
+        model_path, thread_num, logger::Level::INFO, detect_param);
+
+    int ret = pool.init(detect_param);
+    if (ret != 0) {
+        LOGE("RknnPool init failed!");
+        return;
+    }
+
+    cv::Mat img = cv::imread(img_path);
+
+    // 模拟视频流处理：边提交边获取结果
+    int total_frames = 100;
+    struct timeval start_time, stop_time;
+    std::atomic<int> submitted_count{0};
+    std::atomic<int> result_count{0};
+    std::atomic<bool> producer_done{false};
+
+    gettimeofday(&start_time, NULL);
+
+    // 生产者线程 - 模拟视频帧输入
+    std::thread producer([&]() {
+        for (int i = 0; i < total_frames; i++) {
+            pool.put(img);
+            submitted_count++;
+            // 模拟视频帧间隔 (约30fps)
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        producer_done = true;
+        LOG("Producer done: submitted %d frames", submitted_count.load());
+    });
+
+    // 消费者线程 - 获取推理结果
+    std::thread consumer([&]() {
+        object_detect_result_list result;
+        while (!producer_done || pool.getPendingCount() > 0) {
+            if (pool.get(result) == 0) {
+                result_count++;
+                if (result_count % 10 == 0) {
+                    LOG("Processed %d/%d frames, detected %d objects",
+                        result_count.load(), total_frames, result.count);
+                }
+            } else {
+                // 队列为空，稍等一下
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        }
+        LOG("Consumer done: processed %d frames", result_count.load());
+    });
+
+    producer.join();
+    consumer.join();
+
+    gettimeofday(&stop_time, NULL);
+
+    float total_time = (__get_us(stop_time) - __get_us(start_time)) / 1000.0;
+    LOG("Video mode test completed: %d frames processed", result_count.load());
+    LOG("Total time: %f ms, FPS: %f\n", total_time, result_count.load() * 1000.0 / total_time);
+}
+
 void print_usage(const char* program_name) {
     LOG("Usage: %s [test_type] [image_path]", program_name);
     LOG("  test_type:");
@@ -179,6 +349,9 @@ void print_usage(const char* program_name) {
     LOG("    all        - Test both YOLO11 and YOLOv5");
     LOG("    multicore  - Test multi-core binding (3 independent models)");
     LOG("    share      - Test weight sharing (rknn_dup_context)");
+    LOG("    pool       - Test thread pool YOLO11 (RknnPool)");
+    LOG("    pool5      - Test thread pool YOLOv5 (RknnPool)");
+    LOG("    video      - Test thread pool video mode (producer-consumer)");
     LOG("  image_path: path to test image (default: ./model/car.jpg)");
 }
 
@@ -208,6 +381,12 @@ int main(int argc, char* argv[]){
         test_multi_core(img_path);
     } else if (test_type == "share") {
         test_share_weight(img_path);
+    } else if (test_type == "pool") {
+        test_thread_pool(img_path);
+    } else if (test_type == "pool5") {
+        test_thread_pool_yolov5(img_path);
+    } else if (test_type == "video") {
+        test_thread_pool_video(img_path);
     } else {
         LOGE("Unknown test type: %s", test_type.c_str());
         print_usage(argv[0]);

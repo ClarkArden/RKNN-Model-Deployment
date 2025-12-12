@@ -24,6 +24,11 @@ detector::YOLO5::YOLO5(std::string model_path, logger::Level level, rknn_context
 
 detector::YOLO5::~YOLO5() {}
 
+object_detect_result_list detector::YOLO5::infer(cv::Mat img) {
+    auto result = inference(img);
+    return std::get<object_detect_result_list>(result);
+}
+
 bool detector::YOLO5::preprocess() {
     // Preprocess image to model input size with letterbox
     memset(&m_pads, 0, sizeof(image_rect_t));
